@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import messagebox
 import threading
 import time
+import requests
 
 # --- Глобальные переменные ---
 ser = None
@@ -73,6 +74,25 @@ def update_label(text):
     info_label.config(text=text)
 
 
+def fetch_pushup_goal():
+    """Получает количество отжиманий с сайта"""
+    if not connected or not ser:
+        messagebox.showwarning("Ошибка", "Сначала подключите Arduino!")
+        return
+
+    try:
+        url = "https://karatunov.net/readme.php?name=mih&pass=anna22"
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        goal = int(response.text.strip())
+
+        info_label.config(text=f"📋 Нужно сделать {goal} отжиманий")
+        ser.write(f"{goal}\n".encode())  # отправляем в Arduino
+        messagebox.showinfo("Задача получена", f"Твоя цель: {goal} отжиманий")
+    except Exception as e:
+        messagebox.showerror("Ошибка", f"Не удалось получить данные: {e}")
+
+
 def on_close():
     """Закрытие приложения"""
     global stop_thread
@@ -84,7 +104,7 @@ def on_close():
 # --- GUI интерфейс ---
 window = tk.Tk()
 window.title("Счётчик отжиманий 💪")
-window.geometry("400x250")
+window.geometry("400x280")
 window.resizable(False, False)
 
 title_label = tk.Label(window, text="Счётчик отжиманий", font=("Arial", 18, "bold"))
@@ -105,6 +125,9 @@ connect_button.grid(row=0, column=0, padx=5)
 disconnect_button = tk.Button(button_frame, text="❎ Отключить", command=disconnect_arduino, width=20)
 disconnect_button.grid(row=0, column=1, padx=5)
 
+goal_button = tk.Button(window, text="🌐 Получить отжимания с сайта", command=fetch_pushup_goal, width=30)
+goal_button.pack(pady=5)
+
 exit_button = tk.Button(window, text="🚪 Выйти", command=on_close, width=20)
 exit_button.pack(pady=10)
 
@@ -112,3 +135,4 @@ window.protocol("WM_DELETE_WINDOW", on_close)
 
 # --- Запуск ---
 window.mainloop()
+
